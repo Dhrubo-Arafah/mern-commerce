@@ -17,18 +17,28 @@ module.exports.signUp = async (req, res) => {
   user.password = await bcrypt.hash(user.password, salt);
   const token = user.generateJWT();
 
-  try {
     const result = await user.save();
     return res.status(201).send({
       message: "Registration Successful!",
       token: token,
       user:_.pick(result, ["_id", "name", "email"])
     })
-  } catch (error) {
-    return res.status(500).send("Something Failed")
-  }
-}
+} 
 
-module.exports.signIn = async(req, res) => {
+module.exports.signIn = async (req, res) => {
+  //For wrong username or password or both
+  let user = await User.findOne({ email: req.body.email });
+  if (!user) return res.status(400).send('Invalid email or password!');
 
+  //For Guest Users
+  const validUser = await bcrypt.compare(req.body.password, user.password);
+  if (!validUser) return res.status(400).send('Invalid email or password!');
+
+  //We use Token to signin authenticated user directly
+  const token = user.generateJWT();
+  return res.status(200).send({
+    message: "Login Successful!",
+    token: token,
+    user: _.pick(user, ["_id", "name", "email"])
+  });
 }
